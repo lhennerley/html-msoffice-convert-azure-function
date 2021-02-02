@@ -1,6 +1,13 @@
 import { readFileSync, writeFileSync } from "fs";
 import * as path from "path";
-import { htmlStringToDocxBuffer } from "./FusionHtmlDocConvert";
+import { HtmlProcessor } from "./FusionHtmlDocConvert/HtmlProcessor";
+import { GenerateDocx } from "./FusionHtmlDocConvert/MicrosoftOffice";
+
+const htmlStringToDocxBuffer = async (html: string): Promise<Buffer> => {
+    const htmlProcessor = new HtmlProcessor(html);
+    const processedData = htmlProcessor.parse();
+    return await GenerateDocx(processedData);
+};
 
 const args = process.argv.slice(2);
 if (!args.length) {
