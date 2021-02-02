@@ -31,7 +31,7 @@ try {
     console.log("Converting HTML to Docx");
     const doc = await htmlStringToDocxBuffer(html);
 
-    const outputFilename = `${inputFilename.replace(/.html/i, "")}.docx`;
+    const outputFilename = `${inputFilename.replace(/\.html/i, "")}.docx`;
     console.log(`Saving as ${outputFilename}`);
     writeFileSync(path.join(process.cwd(), outputFilename), doc);
 })();
