@@ -8,6 +8,7 @@
     "prestart": "npm run build",
     "start": "func start",
     "pretest": "npm run build",
+    "format": "prettier --write **/*.ts",
     "test": "node dist/test-doc-convert.js"
   },
   "dependencies": {
@@ -16,9 +17,11 @@
   },
   "devDependencies": {
     "@azure/functions": "^1.0.2-beta2",
+    "@types/cheerio": "^0.22.23",
+    "prettier": "^2.2.1",
     "typescript": "^3.3.3"
   },
-  "engines" : {
-    "node" : ">=14.0.0"
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

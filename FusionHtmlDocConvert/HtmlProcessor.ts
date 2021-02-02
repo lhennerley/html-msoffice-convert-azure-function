@@ -1,96 +1,70 @@
-import * as cheerio from "cheerio"
-import { Node, NodeWithChildren } from "domhandler";
+import * as cheerio from "cheerio";
+import {
+  HtmlProcessedData,
+  HtmlProcessedHeader,
+  HtmlProcessedTable,
+  HtmlProcessedTableRow,
+} from "./types";
 
 export class HtmlProcessor {
-    /**
-     *
-     */
-    constructor(private htmlString: string) {
+  /**
+   *
+   */
+  constructor(private htmlString: string) {}
+
+  private parseTable(tbody: cheerio.TagElement): HtmlProcessedTable {
+    const rows = new Array<HtmlProcessedTableRow>();
+
+    tbody.children
+      .filter((tr) => tr.type === "tag" && tr.name == "tr")
+      .forEach((tr) => {
+        if (tr.type !== "tag") return;
+        const cells: string[] = [];
+
+        tr.children.forEach((td) => {
+          if (td.type !== "tag") return;
+          let cellText = td.firstChild;
+          while (cellText?.type === "tag" && cellText.children) {
+            cellText = cellText.firstChild;
+          }
+          cells.push(cellText ? cellText.data : "");
+        });
+
+        rows.push(new HtmlProcessedTableRow(cells));
+      });
+
+    return new HtmlProcessedTable(rows);
+  }
+
+  public parse(): HtmlProcessedData {
+    const $ = cheerio.load(this.htmlString);
+
+    const data: HtmlProcessedData = {
+      elements: new Array<HtmlProcessedTable | HtmlProcessedHeader>(),
+    };
+
+    $("body")
+      .children()
+      .each((_, element) => this.traverseChildren(data, element));
+
+    return data;
+  }
+
+  private traverseChildren(data: HtmlProcessedData, element: cheerio.Element) {
+    if (element.type !== "tag") return;
+
+    if (element.name === "table") {
+      element.children.forEach((node) => {
+        if (node.type === "tag" && node.name == "tbody") {
+          data.elements.push(this.parseTable(node));
+        }
+      });
     }
 
-    private parseTable(tbody: NodeWithChildren): HtmlProcessedTable {
-        const rows = new Array<HtmlProcessedTableRow>();
-
-        if (tbody.children) {
-            tbody.children.filter((tr: any) => tr.name == "tr").forEach((tr: any) => {
-                const cells = new Array<string>();
-    
-                const tableRow: NodeWithChildren = tr;
-    
-                tableRow.children.forEach((td: any) => {
-                    const tableCell: NodeWithChildren = td;
-                    if (tableCell.children) {
-                        let cellText: NodeWithChildren = <NodeWithChildren>tableCell.firstChild;
-                        while (cellText && cellText.children) {
-                            cellText = <NodeWithChildren>cellText.firstChild;
-                        }
-                        if (cellText) {
-                            cells.push((<any>cellText).data);
-                        } else {
-                            cells.push('');
-                        }
-                    }
-                })
-    
-                rows.push(new HtmlProcessedTableRow(cells));
-            })
-        }
-    
-        return new HtmlProcessedTable(rows);
+    if (element.name.match(/h\d/)) {
+      data.elements.push(new HtmlProcessedHeader(Number(element.name[1]), element.firstChild.data));
     }
 
-    public parse() : HtmlProcessedData {
-        const $ = cheerio.load(this.htmlString);
-        
-        const data : HtmlProcessedData = {
-            elements: new Array<HtmlProcessedTable | HtmlProcessedHeader>()
-        }
-
-        $('body').children().each((index, element) => {
-            this.traverseChildren(data, element);
-        })
-
-        return data;
-    }
-
-    //TODO: figure out why can't use cheerio types here/how to get rid of any
-    private traverseChildren(data: HtmlProcessedData, element: any) {
-        switch(element.name) {
-            case "table":
-                element.children.forEach((node: any) => {
-                    if (node.name == "tbody") {
-                        data.elements.push(this.parseTable(node));
-                    }
-                });
-            break;
-            case "h1":
-            case "h2":
-            case "h3":
-            case "h4":
-            case "h5":
-            case "h6":
-                data.elements.push(new HtmlProcessedHeader(<number>element.name[1], element.firstChild.data));
-            break;
-        }
-
-        if (element.children) {
-            element.children.forEach((node) => {
-                this.traverseChildren(data, node);
-            });
-        }
-    }
-}
-
-
-export class HtmlProcessedData {
-    elements: Array<HtmlProcessedTable | HtmlProcessedHeader>
-}
-export class HtmlProcessedTable {
-    constructor(public rows: HtmlProcessedTableRow[]){} 
-}
-export class HtmlProcessedTableRow {
-    constructor(public cells: string[]) {}
-}
-export class HtmlProcessedHeader {
-    constructor(public level: number, public text: string) {}
+    element.children.forEach((node) => this.traverseChildren(data, node));
+  }
 }
