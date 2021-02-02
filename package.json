@@ -16,5 +16,8 @@
   "devDependencies": {
     "@azure/functions": "^1.0.2-beta2",
     "typescript": "^3.3.3"
+  },
+  "engines" : {
+    "node" : ">=14.0.0"
   }
 }
