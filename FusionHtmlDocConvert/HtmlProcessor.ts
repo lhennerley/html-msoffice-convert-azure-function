@@ -1,6 +1,5 @@
 import * as cheerio from "cheerio"
 import { Node, NodeWithChildren } from "domhandler";
-import { html } from "cheerio";
 
 export class HtmlProcessor {
     /**
@@ -47,29 +46,41 @@ export class HtmlProcessor {
             elements: new Array<HtmlProcessedTable | HtmlProcessedHeader>()
         }
 
-        $('body').children().each((index, element: any) => {
-            switch(element.name) {
-                case "table":
-                    element.children.forEach((node: any) => {
-                        if (node.name == "tbody") {
-                            data.elements.push(this.parseTable(node));
-                        }
-                    });
-                break;
-                case "h1":
-                case "h2":
-                case "h3":
-                case "h4":
-                case "h5":
-                case "h6":
-                    data.elements.push(new HtmlProcessedHeader(<number>element.name[1], element.firstChild.data));
-                break;
-            }
+        $('body').children().each((index, element) => {
+            this.traverseChildren(data, element);
         })
 
         return data;
     }
+
+    //TODO: figure out why can't use cheerio types here/how to get rid of any
+    private traverseChildren(data: HtmlProcessedData, element: any) {
+        switch(element.name) {
+            case "table":
+                element.children.forEach((node: any) => {
+                    if (node.name == "tbody") {
+                        data.elements.push(this.parseTable(node));
+                    }
+                });
+            break;
+            case "h1":
+            case "h2":
+            case "h3":
+            case "h4":
+            case "h5":
+            case "h6":
+                data.elements.push(new HtmlProcessedHeader(<number>element.name[1], element.firstChild.data));
+            break;
+        }
+
+        if (element.children) {
+            element.children.forEach((node) => {
+                this.traverseChildren(data, node);
+            });
+        }
+    }
 }
+
 
 export class HtmlProcessedData {
     elements: Array<HtmlProcessedTable | HtmlProcessedHeader>
