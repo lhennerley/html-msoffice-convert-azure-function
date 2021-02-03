@@ -1,5 +1,21 @@
-import { Document, Paragraph, Table, TableCell, TableRow, Packer, HeadingLevel } from "docx";
-import { HtmlProcessedData, HtmlProcessedHeader, HtmlProcessedTable } from "./types";
+import {
+  Document,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  Packer,
+  HeadingLevel,
+  Media,
+  TextRun,
+} from "docx";
+import {
+  HtmlProcessedData,
+  HtmlProcessedHeader,
+  HtmlProcessedImage,
+  HtmlProcessedTable,
+  HtmlProcessedText,
+} from "./types";
 
 export async function GenerateDocx(data: HtmlProcessedData): Promise<Buffer> {
   const doc = new Document();
@@ -8,7 +24,23 @@ export async function GenerateDocx(data: HtmlProcessedData): Promise<Buffer> {
   data.elements.forEach((element) => {
     if (element instanceof HtmlProcessedTable) {
       const rows = element.rows.map((r) => {
-        const children = r.cells.map((cell) => new TableCell({ children: [new Paragraph(cell)] }));
+        const children = r.cells.map(
+          (cell) =>
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: cell.map(
+                    (c) =>
+                      new TextRun({
+                        text: c.text,
+                        bold: c.bold,
+                        break: 1,
+                      })
+                  ),
+                }),
+              ],
+            })
+        );
         return new TableRow({ children });
       });
       docElements.push(new Table({ rows }));
@@ -26,6 +58,20 @@ export async function GenerateDocx(data: HtmlProcessedData): Promise<Buffer> {
         new Paragraph({
           text: element.text,
           heading: headingLevels[element.level],
+        })
+      );
+    } else if (element instanceof HtmlProcessedImage) {
+      const docImage = Media.addImage(doc, element.buffer, element.width, element.height);
+      docElements.push(new Paragraph(docImage));
+    } else if (element instanceof HtmlProcessedText) {
+      docElements.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: element.text,
+              bold: element.bold,
+            }),
+          ],
         })
       );
     }

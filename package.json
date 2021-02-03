@@ -13,7 +13,10 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.5",
-    "docx": "^5.5.0"
+    "docx": "^5.5.0",
+    "image-size": "^0.9.3",
+    "node-fetch": "^2.6.1",
+    "style-to-object": "^0.3.0"
   },
   "devDependencies": {
     "@azure/functions": "^1.0.2-beta2",
