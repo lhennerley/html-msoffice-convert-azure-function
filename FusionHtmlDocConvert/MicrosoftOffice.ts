@@ -8,6 +8,8 @@ import {
   HeadingLevel,
   Media,
   TextRun,
+  BorderStyle,
+  WidthType,
 } from "docx";
 import {
   HtmlProcessedData,
@@ -19,31 +21,48 @@ import {
 
 export async function GenerateDocx(data: HtmlProcessedData): Promise<Buffer> {
   const doc = new Document();
-  const docElements = [];
+  const docElements: any[] = [];
 
   data.elements.forEach((element) => {
     if (element instanceof HtmlProcessedTable) {
+      const borderAttr = Number(element.tableAttributes?.border || "0");
+      const borderStyle = {
+        style: borderAttr ? BorderStyle.SINGLE : BorderStyle.NONE,
+        size: borderAttr,
+        color: element.tableAttributes?.bordercolor || "black",
+      };
+      const borders = {
+        top: borderStyle,
+        bottom: borderStyle,
+        left: borderStyle,
+        right: borderStyle,
+      };
+
       const rows = element.rows.map((r) => {
-        const children = r.cells.map(
-          (cell) =>
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: cell.map(
-                    (c) =>
-                      new TextRun({
-                        text: c.text,
-                        bold: c.bold,
-                        break: 1,
-                      })
-                  ),
-                }),
-              ],
-            })
-        );
+        const children = r.cells.map((cell) => {
+          const children = [
+            new Paragraph({
+              children: cell.map((c) => {
+                return new TextRun({ text: c.text, bold: c.bold, break: 1 });
+              }),
+            }),
+          ];
+          return new TableCell({ borders, children });
+        });
         return new TableRow({ children });
       });
-      docElements.push(new Table({ rows }));
+
+      const tableWidth = Number(element.tableAttributes?.width);
+      docElements.push(
+        new Table({
+          rows,
+          borders,
+          width:
+            !isNaN(tableWidth) && tableWidth > 0
+              ? { size: tableWidth * 20, type: WidthType.DXA }
+              : { size: 100, type: WidthType.PERCENTAGE },
+        })
+      );
     } else if (element instanceof HtmlProcessedHeader) {
       const headingLevels: { [index: number]: HeadingLevel } = {
         1: HeadingLevel.HEADING_1,

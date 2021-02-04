@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import * as fetch from "node-fetch";
+import fetch from "node-fetch";
 import parse from "style-to-object";
 import {
   HtmlProcessedData,
@@ -8,6 +8,7 @@ import {
   HtmlProcessedTable,
   HtmlProcessedTableRow,
   HtmlProcessedText,
+  TableAttributes,
 } from "./types";
 import { imageSize } from "image-size";
 
@@ -32,9 +33,9 @@ export class HtmlProcessor {
           if (td.type !== "tag") return;
 
           td.children.forEach(async (c) => {
-            if (c.type == "text") {
+            if (c.type == "text" && c.data?.trim()) {
               cellContents.push(new HtmlProcessedText(c.data));
-            } else {
+            } else if (c.type == "tag") {
               const cellText = await this.parseText(c);
               if (cellText) {
                 cellContents.push(cellText);
@@ -48,7 +49,10 @@ export class HtmlProcessor {
         rows.push(new HtmlProcessedTableRow(cells));
       });
 
-    return new HtmlProcessedTable(rows);
+    const table = tbody.parent;
+    const tableAttributes = table.type === "tag" && table.name === "table" ? table.attribs : {};
+
+    return new HtmlProcessedTable(rows, tableAttributes);
   }
 
   public async parse(): Promise<HtmlProcessedData> {
@@ -66,13 +70,13 @@ export class HtmlProcessor {
   }
 
   private async parseText(element: cheerio.TagElement) {
-    const text: cheerio.TextElement = this.traverseUntilText(element);
-    if (text) {
+    const text: cheerio.TextElement | undefined = this.traverseUntilText(element);
+    if (text?.data) {
       let style: { [attr: string]: string } = {};
 
       if (text.parent.type == "tag") {
         if (text.parent.attribs["style"]) {
-          style = parse(text.parent.attribs["style"]);
+          style = parse(text.parent.attribs["style"]) || {};
         }
       }
       const bold =
@@ -98,7 +102,7 @@ export class HtmlProcessor {
         const response = await fetch(element.attribs["src"]);
         const buffer = await response.buffer();
         const imgSize = imageSize(buffer);
-        data.elements.push(new HtmlProcessedImage(buffer, imgSize.height, imgSize.width));
+        data.elements.push(new HtmlProcessedImage(buffer, imgSize.height || 0, imgSize.width || 0));
       }
     } else if (element.name == "p" || element.name == "b") {
       const textElement = await this.parseText(element);
@@ -110,7 +114,9 @@ export class HtmlProcessor {
         }
       }
     } else if (element.name.match(/h\d/)) {
-      data.elements.push(new HtmlProcessedHeader(Number(element.name[1]), element.firstChild.data));
+      data.elements.push(
+        new HtmlProcessedHeader(Number(element.name[1]), element.firstChild?.data || "")
+      );
     } else {
       for (const node of element.children) {
         await this.traverseChildren(data, node);
@@ -118,8 +124,8 @@ export class HtmlProcessor {
     }
   }
 
-  private traverseUntilText(element: cheerio.Element): cheerio.TextElement {
-    let currentElement: cheerio.Element = element;
+  private traverseUntilText(element: cheerio.Element): cheerio.TextElement | undefined {
+    let currentElement: cheerio.Element | null = element;
     if (currentElement.type == "tag") {
       do {
         currentElement = currentElement.firstChild;
