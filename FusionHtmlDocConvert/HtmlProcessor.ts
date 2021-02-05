@@ -8,7 +8,6 @@ import {
   HtmlProcessedTable,
   HtmlProcessedTableRow,
   HtmlProcessedText,
-  TableAttributes,
 } from "./types";
 import { imageSize } from "image-size";
 
