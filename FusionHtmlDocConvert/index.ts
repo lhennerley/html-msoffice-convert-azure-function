@@ -9,7 +9,7 @@ const httpTrigger: AzureFunction = async function (
   context.log("HTTP trigger function processed a request.");
 
   const htmlProcessor = new HtmlProcessor(req.body.toString());
-  const processedData = htmlProcessor.parse();
+  const processedData = await htmlProcessor.parse();
 
   const docBuffer = await GenerateDocx(processedData);
 

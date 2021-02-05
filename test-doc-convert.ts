@@ -6,7 +6,7 @@ import { GenerateDocx } from "./FusionHtmlDocConvert/MicrosoftOffice";
 const htmlStringToDocxBuffer = async (html: string): Promise<Buffer> => {
     const htmlProcessor = new HtmlProcessor(html);
     const processedData = htmlProcessor.parse();
-    return await GenerateDocx(processedData);
+    return await GenerateDocx(await processedData);
 };
 
 const args = process.argv.slice(2);
